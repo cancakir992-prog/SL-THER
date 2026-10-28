@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10111d">
+  <title>Slither Arena — Yılan Arenası</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .game-actions{display:flex;align-items:center;gap:7px}
+    .settings-card{max-height:calc(100dvh - 30px);overflow-y:auto;overscroll-behavior:contain}
+    .player-reset{margin-top:20px;padding:15px;border:1px solid #ff7b8360;border-radius:12px;background:#ff68720a}
+    .player-reset h3{margin:8px 0;font:600 16px "Space Grotesk",sans-serif}
+    .player-reset p,.player-reset small{display:block;color:#a6a7b6;font-size:10px;line-height:1.55}
+    .player-reset label{display:block;margin:11px 0 5px;color:#c5c6d3;font-size:10px}
+    .player-reset input{width:100%;padding:10px;border:1px solid #ffffff20;border-radius:8px;background:#10111b;color:#f4f3fa;font:12px "DM Sans",sans-serif}
+    .danger-button{width:100%;margin:12px 0 8px;padding:10px;border:1px solid #ff747477;border-radius:8px;background:#ff657019;color:#ffb1b5;font:700 11px "DM Sans",sans-serif;cursor:pointer}
+    .danger-button:hover:not(:disabled){background:#ff657033}
+    .danger-button:disabled{opacity:.55;cursor:wait}
+    @media(max-width:620px){.game-actions{gap:5px}.game-actions>.glass-button{padding:9px 11px}.player-reset{padding:12px}}
+  </style>
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Slither Arena ana sayfa"><span class="brand-mark">S</span><span>SLITHER<span class="brand-accent"> ARENA</span></span></a>
+    <div class="header-right">
+      <span class="online-pill"><i></i><b id="online-count">0</b> çevrim içi</span>
+      <button class="icon-button" id="sound-toggle" aria-label="Sesi aç veya kapat">♫</button>
+      <div class="wallet"><span class="coin">✦</span><b id="wallet-points">0</b><small>puan</small></div>
+      <button class="avatar" id="profile-avatar" aria-label="Oyuncu profili">?</button>
+    </div>
+  </header>
+
+  <main id="menu-view" class="page">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-dot"></span> ARENAYA HOŞ GELDİN</div>
+        <h1>Kay, büyü,<br><span>arenaya hükmet.</span></h1>
+        <p>Enerjileri topla, rakiplerini alt et ve kendi efsaneni yaz.</p>
+        <form id="play-form" class="play-card">
+          <label for="username">OYUNCU ADI</label>
+          <div class="name-field"><span class="user-icon">◎</span><input id="username" maxlength="18" minlength="2" placeholder="Adını yaz..." autocomplete="nickname" required><button type="submit" class="play-button">Oyna <span>→</span></button></div>
+          <div class="mode-row">
+            <button type="button" class="mode-button selected" data-mode="bots"><span class="mode-icon">✳</span><span><b>Botlara karşı</b><small>Pratik yap, ustalaş</small></span><i></i></button>
+            <button type="button" class="mode-button" data-mode="online"><span class="mode-icon">⌁</span><span><b>Çevrim içi</b><small>Gerçek oyuncular</small></span><i></i></button>
+          </div>
+          <div id="room-entry" class="room-entry hidden"><input id="room-code" maxlength="8" placeholder="Oda kodu (isteğe bağlı)"><button id="copy-room" type="button">Davet bağlantısı</button></div>
+          <div class="hint">MOUSE İLE YÖN VER <span>•</span> BASILI TUTARAK HIZLAN</div>
+        </form>
+        <div class="trust-row"><span>◈ Ücretsiz oyna</span><span>⌘ Hesapsız başla</span><span>↗ Arkadaşlarınla yarış</span></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="spark spark-one">✦</div><div class="spark spark-two">✧</div>
+        <div class="hero-snake"><span class="snake-eye"></span><span class="snake-eye second"></span></div>
+        <span class="float-dot dot-a"></span><span class="float-dot dot-b"></span><span class="float-dot dot-c"></span>
+        <div class="art-caption"><span class="live-pulse"></span> ARENA CANLI <b>SEZON 01</b></div>
+      </div>
+    </section>
+
+    <section class="dashboard">
+      <div class="section-heading"><div><div class="eyebrow">ARENANIN NABZI</div><h2>Bugünün yıldızları</h2></div><span class="refresh-label"><i></i> CANLI LİDER TABLOSU</span></div>
+      <div class="leader-grid">
+        <article class="panel leaderboard-panel"><div class="panel-heading"><div><span class="panel-icon">♛</span><h3>En iyi skorlar</h3></div><span class="subtle">Tüm zamanlar</span></div><div id="best-list" class="list"><div class="empty-state">Henüz skor yok — ilk sen ol!</div></div></article>
+        <article class="panel recent-panel"><div class="panel-heading"><div><span class="panel-icon pink">↗</span><h3>Son maçlar</h3></div><span class="subtle">Yeni sonuçlar</span></div><div id="recent-list" class="list"><div class="empty-state">Maç sonuçları burada görünecek.</div></div></article>
+        <article class="panel profile-panel"><div class="panel-heading"><div><span class="panel-icon gold">◉</span><h3>Oyuncu kartı</h3></div><button class="text-button" id="history-open">Maç geçmişi →</button></div><div class="profile-inner"><div class="big-avatar" id="profile-snake">✦</div><div><b id="profile-name">Misafir oyuncu</b><small id="profile-tag">Arenaya katıl ve başla</small></div></div><div class="stats-row"><div><b id="stat-points">0</b><small>TOPLAM PUAN</small></div><div><b id="stat-games">0</b><small>OYUN</small></div><div><b id="stat-best">0</b><small>EN İYİ SKOR</small></div></div></article>
+      </div>
+    </section>
+    <section class="bottom-cta"><div class="cta-orb">✦</div><div><b>Her yılanın bir hikâyesi var.</b><span>Seninkini şimdi yazmaya başla.</span></div><button id="jump-to-play">Hemen oyna <span>→</span></button></section>
+    <footer><span>© 2026 SLITHER ARENA</span><span>YILANINI SEÇ. ARENAYA DAL.</span><button id="shop-open-footer">SKİN MARKETİ</button></footer>
+  </main>
+
+  <main id="shop-view" class="page subpage hidden">
+    <button class="back-button" data-back>← Ana menü</button>
+    <div class="section-heading shop-heading"><div><div class="eyebrow">GÖRÜNÜMÜNÜ KONUŞTUR</div><h2>Skin marketi</h2><p>40 özgün görünüm. Hepsi kozmetik, hepsi senin tarzın.</p></div><div class="shop-balance">✦ <b id="shop-points">0</b> puan</div></div>
+    <div id="skin-filters" class="filter-row"></div><div id="skin-grid" class="skin-grid"></div>
+  </main>
+
+  <main id="history-view" class="page subpage hidden">
+    <button class="back-button" data-back>← Ana menü</button>
+    <div class="section-heading"><div><div class="eyebrow">KİŞİSEL ARŞİV</div><h2>Maç geçmişin</h2></div></div>
+    <div id="history-list" class="history-list"></div>
+  </main>
+
+  <main id="game-view" class="game-view hidden">
+    <canvas id="game-canvas"></canvas>
+    <div class="game-top"><button id="leave-game" class="glass-button">← Menü</button><div class="game-score"><small>SKORUN</small><b id="live-score">0</b></div><div class="game-actions"><button id="game-admin-open" class="glass-button" aria-label="Oyun ayarları ve skor yönetimi">⚙</button><div class="game-room"><span class="live-pulse"></span><span id="room-label">ARENA</span><button id="share-room" title="Davet bağlantısını kopyala">⧉</button></div></div></div>
+    <div class="game-side"><div class="side-card"><small>ARENA SIRALAMASI</small><div id="game-rankings"></div></div></div>
+    <div class="game-bottom"><span>FARE / DOKUN: YÖN VER</span><span class="boost-tip">BASILI TUT: <b>HIZLAN</b></span></div>
+    <div id="game-over" class="modal-layer hidden"><div class="result-card"><div class="result-icon">✦</div><span class="eyebrow">MAÇ TAMAMLANDI</span><h2>Güzel oyundu!</h2><div class="result-score"><small>MAÇ SKORU</small><b id="final-score">0</b></div><div class="result-stats"><span>Sıralama <b id="final-rank">—</b></span><span>Süre <b id="final-duration">0:00</b></span><span>Kazanç <b id="final-reward">0</b> ✦</span></div><button id="play-again" class="primary-button">Tekrar oyna →</button><button id="return-menu" class="quiet-button">Ana menüye dön</button></div></div>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+  <div id="settings-modal" class="modal-layer hidden"><div class="result-card settings-card"><button class="modal-close" id="settings-close">×</button><div class="eyebrow">TERCİHLER</div><h2>Ayarlar</h2><label class="setting-row"><span>Arka plan sesi</span><input id="settings-sound" type="checkbox"></label><label class="setting-row"><span>Hareket hassasiyeti</span><input id="sensitivity" type="range" min="1" max="10" value="6"></label><p class="settings-note">Hızlanmak için oyun sırasında tıklayıp basılı tut veya mobilde parmağını basılı tut.</p><section class="player-reset"><div class="eyebrow">OYUNCU İŞLEMİ</div><h3>Oyuncu bilgilerimi sıfırla</h3><p>Yalnızca kendi puanların, oyun sayın, kişisel rekorun ve maç geçmişin silinir. Hesabın ve sahip olduğun skinler korunur; devam eden maçların sıfır skorla sürer.</p><label for="player-reset-confirm">Onaylamak için reset yaz (büyük/küçük harf fark etmez)</label><input id="player-reset-confirm" type="text" autocomplete="off" placeholder="reset"><button id="player-reset-submit" class="danger-button">Bilgilerimi sıfırla</button><small id="player-reset-status">İşlem yalnızca oturum açmış oyuncu hesabını etkiler.</small></section></div></div>
+</body>
+</html>
